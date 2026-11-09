@@ -81,6 +81,28 @@ public class TestOverviewPanelProvider extends LuceneTestCase {
           try {
             handler.open(indexPath.toString(), FSDirectory.class.getName());
             assertFalse(showTerms.isEnabled());
+            var filter =
+                findComponent(
+                    panel, JTextField.class, field -> "fieldFilter".equals(field.getName()));
+            table.getRowSorter().toggleSortOrder(0);
+            filter.setText("COUNTRY");
+            assertEquals(1, table.getRowCount());
+            table.setRowSelectionInterval(0, 0);
+            assertEquals("country", selectedField.getText());
+            showTerms.doClick();
+            var filteredTerms =
+                findComponent(
+                    panel,
+                    JTable.class,
+                    candidate ->
+                        candidate.getModel() instanceof OverviewPanelProvider.TopTermsTableModel);
+            assertEquals("Canada", filteredTerms.getValueAt(0, 2));
+            filter.setText("[");
+            assertEquals(0, table.getRowCount());
+            assertEquals("", selectedField.getText());
+            assertFalse(showTerms.isEnabled());
+            filter.setText("");
+            assertEquals(2, table.getRowCount());
             table.setRowSelectionInterval(0, 0);
             assertEquals(table.getValueAt(0, 0), selectedField.getText());
             assertTrue(showTerms.isEnabled());
@@ -103,6 +125,10 @@ public class TestOverviewPanelProvider extends LuceneTestCase {
             table.clearSelection();
             assertEquals("", selectedField.getText());
             assertFalse(showTerms.isEnabled());
+            filter.setText("no match");
+            handler.reOpen();
+            assertEquals("", filter.getText());
+            assertEquals(2, table.getRowCount());
           } finally {
             handler.close();
           }
