@@ -18,6 +18,7 @@
 package org.apache.lucene.luke.app.desktop.components;
 
 import java.io.IOException;
+import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import org.apache.lucene.luke.app.DirectoryHandler;
@@ -26,12 +27,23 @@ import org.apache.lucene.luke.app.IndexHandler;
 import org.apache.lucene.luke.app.IndexObserver;
 import org.apache.lucene.luke.app.LukeState;
 import org.apache.lucene.luke.app.desktop.MessageBroker;
+import org.apache.lucene.luke.app.desktop.Preferences;
+import org.apache.lucene.luke.app.desktop.PreferencesFactory;
+import org.apache.lucene.luke.app.desktop.util.ExceptionHandler;
 import org.apache.lucene.luke.app.desktop.util.FontUtils;
 import org.apache.lucene.luke.app.desktop.util.MessageUtils;
 import org.apache.lucene.luke.app.desktop.util.TabUtils;
 
 /** Provider of the Tabbed pane */
 public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
+
+  private static final String[] NAVIGATION_ICONS = {
+    "&#xe009;", "&#xe025;", "&#x69;", "&#xe101;", "&#xe104;", "&#xe0ea;", "&#xe058;"
+  };
+
+  private final JButton sidebarToggle = new JButton();
+  private final Preferences preferences;
+  private boolean sidebarCollapsed;
 
   private final MessageBroker messageBroker;
   private final boolean experimentalUi;
@@ -57,6 +69,7 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
 
   public TabbedPaneProvider(boolean experimentalUi) throws IOException {
     this.experimentalUi = experimentalUi;
+    this.preferences = experimentalUi ? PreferencesFactory.getInstance() : null;
     this.tabbedPane = new JTabbedPane(experimentalUi ? JTabbedPane.LEFT : JTabbedPane.TOP);
     if (experimentalUi) {
       tabbedPane.setOpaque(true);
@@ -115,12 +128,57 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
 
     // Legacy screens contain transparent panels; only the navigation rail should be dark.
     for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+      tabbedPane.setToolTipTextAt(i, tabbedPane.getTitleAt(i));
       JPanel content = (JPanel) tabbedPane.getComponentAt(i);
       content.setOpaque(true);
       content.setBackground(javax.swing.UIManager.getColor("Panel.background"));
     }
 
+    sidebarToggle.setName("sidebarToggle");
+    sidebarToggle.setBackground(tabbedPane.getBackground());
+    sidebarToggle.setForeground(tabbedPane.getForeground());
+    sidebarToggle.putClientProperty("JButton.buttonType", "toolBarButton");
+    sidebarToggle.setPreferredSize(new java.awt.Dimension(56, 44));
+    sidebarToggle.addActionListener(
+        _ -> {
+          setSidebarCollapsed(!sidebarCollapsed);
+          try {
+            preferences.setSidebarCollapsed(sidebarCollapsed);
+          } catch (IOException e) {
+            ExceptionHandler.handle(e, messageBroker);
+          }
+        });
+    tabbedPane.putClientProperty("JTabbedPane.leadingComponent", sidebarToggle);
+    setSidebarCollapsed(preferences.isSidebarCollapsed());
+
     return tabbedPane;
+  }
+
+  void setSidebarCollapsed(boolean collapsed) {
+    sidebarCollapsed = collapsed;
+    tabbedPane.putClientProperty("JTabbedPane.minimumTabWidth", collapsed ? 56 : 180);
+    tabbedPane.putClientProperty("JTabbedPane.maximumTabWidth", collapsed ? 56 : 180);
+    tabbedPane.putClientProperty("JTabbedPane.tabAlignment", collapsed ? "center" : "leading");
+    for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+      String label = tabbedPane.getToolTipTextAt(i);
+      tabbedPane.setTitleAt(
+          i,
+          collapsed
+              ? FontUtils.elegantIconHtml(NAVIGATION_ICONS[i])
+              : FontUtils.elegantIconHtml(NAVIGATION_ICONS[i], label));
+      tabbedPane
+          .getAccessibleContext()
+          .getAccessibleChild(i)
+          .getAccessibleContext()
+          .setAccessibleName(label);
+    }
+    String action =
+        MessageUtils.getLocalizedMessage(collapsed ? "navigation.expand" : "navigation.collapse");
+    sidebarToggle.setText(collapsed ? "›" : "‹  " + action);
+    sidebarToggle.setToolTipText(action);
+    sidebarToggle.getAccessibleContext().setAccessibleName(action);
+    tabbedPane.revalidate();
+    tabbedPane.repaint();
   }
 
   @Override

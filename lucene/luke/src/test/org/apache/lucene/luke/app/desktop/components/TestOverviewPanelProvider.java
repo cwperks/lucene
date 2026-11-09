@@ -49,7 +49,29 @@ public class TestOverviewPanelProvider extends LuceneTestCase {
     SwingUtilities.invokeAndWait(
         () -> {
           try {
-            var tabs = new TabbedPaneProvider(true).get();
+            var provider = new TabbedPaneProvider(true);
+            var tabs = provider.get();
+            tabs.setSelectedIndex(3);
+            tabs.setEnabledAt(5, false);
+            var selected = tabs.getSelectedComponent();
+            provider.setSidebarCollapsed(true);
+            assertEquals(56, tabs.getClientProperty("JTabbedPane.maximumTabWidth"));
+            assertSame(selected, tabs.getSelectedComponent());
+            assertFalse(tabs.isEnabledAt(5));
+            for (int i = 0; i < tabs.getTabCount(); i++) {
+              assertEquals(
+                  tabs.getToolTipTextAt(i),
+                  tabs.getAccessibleContext()
+                      .getAccessibleChild(i)
+                      .getAccessibleContext()
+                      .getAccessibleName());
+              assertFalse(tabs.getTitleAt(i).contains(tabs.getToolTipTextAt(i)));
+            }
+            provider.setSidebarCollapsed(false);
+            assertEquals(180, tabs.getClientProperty("JTabbedPane.minimumTabWidth"));
+            assertSame(selected, tabs.getSelectedComponent());
+            assertFalse(tabs.isEnabledAt(5));
+            assertTrue(tabs.getTitleAt(3).contains(tabs.getToolTipTextAt(3)));
             var nestedTabs = new javax.swing.JTabbedPane();
             var originalUI = nestedTabs.getUI();
             org.apache.lucene.luke.app.desktop.util.TabUtils.forceTransparent(nestedTabs);

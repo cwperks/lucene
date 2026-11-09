@@ -44,6 +44,11 @@ Omit the flag (or the Gradle property) to return to the classic interface.
 The choice is not saved in preferences and requires restarting Luke; there is no
 live theme/layout switch. The distribution still contains FlatLaf in both modes.
 
+In the experimental interface, the sidebar toggle switches between labels and an
+icon-only rail. Hover over an icon for its screen name. This sidebar preference
+is saved in Luke's existing `~/.luke.d/luke.ini` configuration and does not affect
+the classic interface.
+
 The Fields explorer previews up to 100 terms in byte order, 50 matching live
 documents, and stored values truncated to 1,000 characters. These are previews,
 not pagination. The existing Documents screen remains available for full values
