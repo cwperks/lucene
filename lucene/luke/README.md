@@ -24,6 +24,11 @@ Integrated desktop GUI tool: a utility for browsing, searching and maintaining i
 The classic interface remains the default. Opt in at startup to try the FlatLaf
 light theme, sidebar navigation, redesigned Overview, and read-only Fields explorer:
 
+The experimental palette uses cool slate surfaces and teal accents, with rounded
+inputs and persistent selection highlights to keep the field-to-document trail
+visible as focus moves between panes. It reuses Swing and FlatLaf components;
+no browser or additional component library is needed.
+
 ```sh
 ./gradlew :lucene:luke:run -Pluke.experimentalUi=true
 ```
