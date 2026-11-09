@@ -44,6 +44,31 @@ public class TestOverviewPanelProvider extends LuceneTestCase {
 
   private static LookAndFeel previousLookAndFeel;
 
+  public void testExperimentalContentDoesNotInheritDarkNavigationBackground() throws Exception {
+    org.apache.lucene.luke.util.LoggerFactory.initGuiLogging();
+    SwingUtilities.invokeAndWait(
+        () -> {
+          try {
+            var tabs = new TabbedPaneProvider(true).get();
+            var nestedTabs = new javax.swing.JTabbedPane();
+            var originalUI = nestedTabs.getUI();
+            org.apache.lucene.luke.app.desktop.util.TabUtils.forceTransparent(nestedTabs);
+            assertSame(originalUI, nestedTabs.getUI());
+            for (int i = 0; i < tabs.getTabCount(); i++) {
+              var content = (javax.swing.JPanel) tabs.getComponentAt(i);
+              assertTrue(tabs.getTitleAt(i), content.isOpaque());
+              assertEquals(UIManager.getColor("Panel.background"), content.getBackground());
+              assertNotEquals(tabs.getBackground(), content.getBackground());
+            }
+          } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+          }
+        });
+    var icon = org.apache.lucene.luke.app.desktop.util.ImageUtils.createApplicationIcon();
+    assertEquals(256, icon.getWidth(null));
+    assertEquals(256, icon.getHeight(null));
+  }
+
   public void testDefaultLayoutAndNavigationIndices() throws Exception {
     SwingUtilities.invokeAndWait(
         () -> {

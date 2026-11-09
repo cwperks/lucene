@@ -96,12 +96,22 @@ public final class LukeWindowProvider implements LukeWindowOperator {
   public JFrame get() {
     frame.setTitle(WINDOW_TITLE);
     frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+    var applicationIcon = ImageUtils.createApplicationIcon();
+    frame.setIconImage(applicationIcon);
+    if (java.awt.Taskbar.isTaskbarSupported()) {
+      var taskbar = java.awt.Taskbar.getTaskbar();
+      if (taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
+        taskbar.setIconImage(applicationIcon);
+      }
+    }
 
     frame.setJMenuBar(menuBar);
     if (experimentalUi) {
       JPanel heading = new JPanel(new BorderLayout(12, 0));
       heading.setBorder(BorderFactory.createEmptyBorder(18, 24, 18, 24));
       JLabel brand = new JLabel("LUKE");
+      brand.setIcon(ImageUtils.createImageIcon("lucene-logo.png", "Apache Lucene", 143, 32));
+      brand.setIconTextGap(20);
       brand.setFont(brand.getFont().deriveFont(java.awt.Font.BOLD, 22f));
       heading.add(brand, BorderLayout.WEST);
       heading.add(

@@ -113,6 +113,13 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
     tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.commits"), commitsPanel);
     tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.logs"), logsPanel);
 
+    // Legacy screens contain transparent panels; only the navigation rail should be dark.
+    for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+      JPanel content = (JPanel) tabbedPane.getComponentAt(i);
+      content.setOpaque(true);
+      content.setBackground(javax.swing.UIManager.getColor("Panel.background"));
+    }
+
     return tabbedPane;
   }
 

@@ -25,6 +25,11 @@ import javax.swing.UIManager;
 public class TabUtils {
 
   public static void forceTransparent(JTabbedPane tabbedPane) {
+    if (UIManager.getLookAndFeel() instanceof com.formdev.flatlaf.FlatLaf) {
+      // Keep FlatLaf's renderer and matching colors, including nested tabs in Search.
+      tabbedPane.putClientProperty("JTabbedPane.showContentSeparator", false);
+      return;
+    }
     String lookAndFeelClassName = UIManager.getLookAndFeel().getClass().getName();
     if (lookAndFeelClassName.contains("AquaLookAndFeel")) {
       // may be running on mac OS. nothing to do.
