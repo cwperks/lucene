@@ -26,8 +26,7 @@ import org.apache.lucene.luke.app.IndexHandler;
 import org.apache.lucene.luke.app.IndexObserver;
 import org.apache.lucene.luke.app.LukeState;
 import org.apache.lucene.luke.app.desktop.MessageBroker;
-import org.apache.lucene.luke.app.desktop.util.FontUtils;
-import org.apache.lucene.luke.app.desktop.util.TabUtils;
+import org.apache.lucene.luke.app.desktop.util.MessageUtils;
 
 /** Provider of the Tabbed pane */
 public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
@@ -37,6 +36,7 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
   private final JTabbedPane tabbedPane;
 
   private final JPanel overviewPanel;
+  private final JPanel fieldsPanel;
 
   private final JPanel documentsPanel;
 
@@ -49,9 +49,17 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
   private final JPanel logsPanel;
 
   public TabbedPaneProvider() throws IOException {
-    this.tabbedPane = new JTabbedPane();
+    this.tabbedPane = new JTabbedPane(JTabbedPane.LEFT);
+    tabbedPane.setOpaque(true);
+    tabbedPane.setBackground(javax.swing.UIManager.getColor("Panel.background"));
+    tabbedPane.putClientProperty("JTabbedPane.minimumTabWidth", 170);
+    tabbedPane.putClientProperty("JTabbedPane.tabHeight", 48);
+    tabbedPane.putClientProperty("JTabbedPane.tabAlignment", "leading");
+    tabbedPane.putClientProperty("JTabbedPane.tabType", "card");
+    tabbedPane.putClientProperty("JTabbedPane.showContentSeparator", false);
 
     this.overviewPanel = new OverviewPanelProvider().get();
+    this.fieldsPanel = new FieldsPanelProvider().get();
     this.documentsPanel = new DocumentsPanelProvider().get();
     this.searchPanel = new SearchPanelProvider().get();
     this.analysisPanel = new AnalysisPanelProvider().get();
@@ -68,14 +76,13 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
   }
 
   public JTabbedPane get() {
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe009;", "Overview"), overviewPanel);
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#x69;", "Documents"), documentsPanel);
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe101;", "Search"), searchPanel);
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe104;", "Analysis"), analysisPanel);
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe0ea;", "Commits"), commitsPanel);
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe058;", "Logs"), logsPanel);
-
-    TabUtils.forceTransparent(tabbedPane);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.overview"), overviewPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.fields"), fieldsPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.documents"), documentsPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.search"), searchPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.analysis"), analysisPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.commits"), commitsPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.logs"), logsPanel);
 
     return tabbedPane;
   }
@@ -97,6 +104,7 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
 
     @Override
     public void closeDirectory() {
+      tabbedPane.setEnabledAt(Tab.FIELDS.index(), false);
       tabbedPane.setEnabledAt(Tab.OVERVIEW.index(), false);
       tabbedPane.setEnabledAt(Tab.DOCUMENTS.index(), false);
       tabbedPane.setEnabledAt(Tab.SEARCH.index(), false);
@@ -105,14 +113,17 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
 
     @Override
     public void openIndex(LukeState state) {
+      tabbedPane.setEnabledAt(Tab.FIELDS.index(), true);
       tabbedPane.setEnabledAt(Tab.OVERVIEW.index(), true);
       tabbedPane.setEnabledAt(Tab.DOCUMENTS.index(), true);
       tabbedPane.setEnabledAt(Tab.SEARCH.index(), true);
       tabbedPane.setEnabledAt(Tab.COMMITS.index(), true);
+      switchTab(Tab.FIELDS);
     }
 
     @Override
     public void closeIndex() {
+      tabbedPane.setEnabledAt(Tab.FIELDS.index(), false);
       tabbedPane.setEnabledAt(Tab.OVERVIEW.index(), false);
       tabbedPane.setEnabledAt(Tab.DOCUMENTS.index(), false);
       tabbedPane.setEnabledAt(Tab.SEARCH.index(), false);
@@ -123,10 +134,11 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
   /** tabs in the main frame */
   public enum Tab {
     OVERVIEW(0),
-    DOCUMENTS(1),
-    SEARCH(2),
-    ANALYZER(3),
-    COMMITS(4);
+    FIELDS(1),
+    DOCUMENTS(2),
+    SEARCH(3),
+    ANALYZER(4),
+    COMMITS(5);
 
     private int tabIdx;
 
