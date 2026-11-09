@@ -17,6 +17,11 @@
 
 package org.apache.lucene.luke.app.desktop.components;
 
+import java.awt.BorderLayout;
+import javax.swing.JPanel;
+import javax.swing.JTable;
+import javax.swing.SwingUtilities;
+import javax.swing.table.DefaultTableModel;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.NumericDocValuesField;
@@ -29,6 +34,24 @@ import org.apache.lucene.tests.util.LuceneTestCase;
 import org.apache.lucene.util.BytesRef;
 
 public class TestFieldsPanelProvider extends LuceneTestCase {
+  public void testEmptyPreviewTracksRows() throws Exception {
+    SwingUtilities.invokeAndWait(
+        () -> {
+          var model = new DefaultTableModel(new String[] {"Term"}, 0);
+          var section = FieldsPanelProvider.section("explorer.terms", new JTable(model));
+          var content =
+              (JPanel) ((BorderLayout) section.getLayout()).getLayoutComponent(BorderLayout.CENTER);
+          assertTrue(content.getComponent(0).isVisible());
+          assertFalse(content.getComponent(1).isVisible());
+          model.addRow(new Object[] {"Canada"});
+          assertFalse(content.getComponent(0).isVisible());
+          assertTrue(content.getComponent(1).isVisible());
+          model.setRowCount(0);
+          assertTrue(content.getComponent(0).isVisible());
+          assertFalse(content.getComponent(1).isVisible());
+        });
+  }
+
   public void testPreviewLimitsAndFieldsWithoutTerms() throws Exception {
     try (var directory = newDirectory();
         var writer = new IndexWriter(directory, new IndexWriterConfig())) {

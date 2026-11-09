@@ -146,6 +146,7 @@ public class LukeMain {
         Map.ofEntries(
             Map.entry("@background", "#F3F6FA"),
             Map.entry("@foreground", "#243247"),
+            Map.entry("Label.disabledForeground", "#52647A"),
             Map.entry("@accentColor", "#0F766E"),
             Map.entry("@selectionBackground", "#CCFBF1"),
             Map.entry("@selectionForeground", "#134E4A"),

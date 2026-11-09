@@ -18,6 +18,7 @@
 package org.apache.lucene.luke.app.desktop.components;
 
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Font;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingWorker;
+import javax.swing.UIManager;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
@@ -127,32 +129,47 @@ public final class FieldsPanelProvider implements IndexObserver {
     JLabel label = new JLabel(message("explorer.title"));
     label.setFont(label.getFont().deriveFont(Font.BOLD, 28f));
     heading.add(label, BorderLayout.NORTH);
-    heading.add(new JLabel(message("explorer.subtitle")), BorderLayout.SOUTH);
+    JLabel subtitle = new JLabel(message("explorer.subtitle"));
+    subtitle.setForeground(UIManager.getColor("Label.disabledForeground"));
+    heading.add(subtitle, BorderLayout.SOUTH);
     panel.add(heading, BorderLayout.NORTH);
 
     JPanel browser = new JPanel(new BorderLayout(0, 10));
+    browser.setBorder(BorderFactory.createEmptyBorder(16, 12, 12, 12));
+    browser.setBackground(fields.getBackground());
+    JPanel fieldFilter = new JPanel(new BorderLayout(0, 12));
+    fieldFilter.setOpaque(false);
+    JLabel fieldsLabel = new JLabel(message("navigation.fields"));
+    fieldsLabel.setFont(fieldsLabel.getFont().deriveFont(Font.BOLD, 15f));
+    fieldFilter.add(fieldsLabel, BorderLayout.NORTH);
     filter.putClientProperty("JTextField.placeholderText", message("overview.filter_hint"));
     filter.putClientProperty("JTextField.showClearButton", true);
     filter.getAccessibleContext().setAccessibleName(message("overview.filter_hint"));
-    browser.add(filter, BorderLayout.NORTH);
-    browser.add(new JScrollPane(fields), BorderLayout.CENTER);
+    filter.setMargin(new java.awt.Insets(8, 10, 8, 10));
+    fieldFilter.add(filter, BorderLayout.CENTER);
+    browser.add(fieldFilter, BorderLayout.NORTH);
+    JScrollPane fieldScroll = new JScrollPane(fields);
+    fieldScroll.setBorder(BorderFactory.createEmptyBorder());
+    browser.add(fieldScroll, BorderLayout.CENTER);
 
     JPanel inspector = new JPanel(new BorderLayout(0, 16));
     inspector.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 0));
     JPanel fieldHeading = new JPanel(new BorderLayout(0, 8));
-    title.setFont(title.getFont().deriveFont(Font.BOLD, 20f));
+    title.setFont(title.getFont().deriveFont(Font.BOLD, 18f));
+    metadata.setForeground(UIManager.getColor("Label.disabledForeground"));
     fieldHeading.add(title, BorderLayout.NORTH);
     fieldHeading.add(metadata, BorderLayout.CENTER);
     inspector.add(fieldHeading, BorderLayout.NORTH);
 
     JSplitPane results =
         split(
-            section("explorer.documents", documents), section("explorer.values", values), 0.3, 150);
+            section("explorer.documents", documents), section("explorer.values", values), 0.3, 180);
     JSplitPane exploration =
         new JSplitPane(JSplitPane.VERTICAL_SPLIT, section("explorer.terms", terms), results);
     exploration.setResizeWeight(0.5);
     exploration.setDividerLocation(240);
     exploration.setBorder(BorderFactory.createEmptyBorder());
+    exploration.setDividerSize(16);
     inspector.add(exploration, BorderLayout.CENTER);
     panel.add(split(browser, inspector, 0.25, 260), BorderLayout.CENTER);
     panel.add(status, BorderLayout.SOUTH);
@@ -165,14 +182,32 @@ public final class FieldsPanelProvider implements IndexObserver {
     pane.setResizeWeight(weight);
     pane.setDividerLocation(location);
     pane.setBorder(BorderFactory.createEmptyBorder());
+    pane.setDividerSize(16);
     return pane;
   }
 
-  private static JPanel section(String key, JTable table) {
-    JPanel section = new JPanel(new BorderLayout(0, 8));
-    section.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 8));
-    section.add(new JLabel(message(key)), BorderLayout.NORTH);
-    section.add(new JScrollPane(table), BorderLayout.CENTER);
+  static JPanel section(String key, JTable table) {
+    JPanel section = new JPanel(new BorderLayout(0, 16));
+    section.setBackground(table.getBackground());
+    section.setBorder(BorderFactory.createEmptyBorder(16, 16, 12, 16));
+    JLabel heading = new JLabel(message(key));
+    heading.setFont(heading.getFont().deriveFont(Font.BOLD, 14f));
+    section.add(heading, BorderLayout.NORTH);
+    JScrollPane scroll = new JScrollPane(table);
+    scroll.setBorder(BorderFactory.createEmptyBorder());
+    CardLayout layout = new CardLayout();
+    JPanel content = new JPanel(layout);
+    content.setOpaque(false);
+    JLabel empty = new JLabel(message(key + ".empty"), JLabel.CENTER);
+    empty.setForeground(UIManager.getColor("Label.disabledForeground"));
+    content.add(empty, "empty");
+    content.add(scroll, "rows");
+    table
+        .getModel()
+        .addTableModelListener(
+            _ -> layout.show(content, table.getRowCount() == 0 ? "empty" : "rows"));
+    layout.show(content, table.getRowCount() == 0 ? "empty" : "rows");
+    section.add(content, BorderLayout.CENTER);
     return section;
   }
 
@@ -188,7 +223,7 @@ public final class FieldsPanelProvider implements IndexObserver {
               }
             });
     table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-    table.setRowHeight(32);
+    table.setRowHeight(36);
     table.setShowGrid(false);
     table.setFillsViewportHeight(true);
     return table;

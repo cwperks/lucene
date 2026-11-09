@@ -60,11 +60,20 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
     this.tabbedPane = new JTabbedPane(experimentalUi ? JTabbedPane.LEFT : JTabbedPane.TOP);
     if (experimentalUi) {
       tabbedPane.setOpaque(true);
-      tabbedPane.setBackground(javax.swing.UIManager.getColor("Panel.background"));
-      tabbedPane.putClientProperty("JTabbedPane.minimumTabWidth", 170);
-      tabbedPane.putClientProperty("JTabbedPane.tabHeight", 48);
+      tabbedPane.setBackground(new java.awt.Color(0x172B3A));
+      tabbedPane.setForeground(new java.awt.Color(0xE2E8F0));
+      tabbedPane.setFont(tabbedPane.getFont().deriveFont(java.awt.Font.BOLD, 14f));
+      tabbedPane.putClientProperty(
+          "FlatLaf.style",
+          "selectedBackground: #244B52; selectedForeground: #FFFFFF;"
+              + " hoverColor: #223E4B; hoverForeground: #FFFFFF;"
+              + " focusColor: #244B52; focusForeground: #FFFFFF;"
+              + " disabledForeground: #94A3B8; underlineColor: #5EEAD4;"
+              + " inactiveUnderlineColor: #5EEAD4; tabSelectionHeight: 3");
+      tabbedPane.putClientProperty("JTabbedPane.minimumTabWidth", 180);
+      tabbedPane.putClientProperty("JTabbedPane.tabHeight", 52);
       tabbedPane.putClientProperty("JTabbedPane.tabAlignment", "leading");
-      tabbedPane.putClientProperty("JTabbedPane.tabType", "card");
+      tabbedPane.putClientProperty("JTabbedPane.tabType", "underlined");
       tabbedPane.putClientProperty("JTabbedPane.showContentSeparator", false);
     }
 
