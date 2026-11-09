@@ -17,13 +17,16 @@
 
 package org.apache.lucene.luke.app.desktop.components;
 
+import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.Component;
 import java.awt.Container;
 import java.util.function.Predicate;
 import javax.swing.JButton;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.LookAndFeel;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
@@ -33,9 +36,25 @@ import org.apache.lucene.luke.app.IndexHandler;
 import org.apache.lucene.luke.app.desktop.util.MessageUtils;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.tests.util.LuceneTestCase;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 
 @LuceneTestCase.SuppressFileSystems("ExtrasFS")
 public class TestOverviewPanelProvider extends LuceneTestCase {
+
+  private static LookAndFeel previousLookAndFeel;
+
+  @BeforeClass
+  public static void installTheme() throws Exception {
+    previousLookAndFeel = UIManager.getLookAndFeel();
+    UIManager.setLookAndFeel(new FlatLightLaf());
+  }
+
+  @AfterClass
+  public static void restoreTheme() throws Exception {
+    UIManager.setLookAndFeel(previousLookAndFeel);
+    previousLookAndFeel = null;
+  }
 
   public void testFieldSelectionWithoutMouseClick() throws Exception {
     var indexPath = createTempDir();

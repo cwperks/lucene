@@ -18,8 +18,6 @@
 package org.apache.lucene.luke.app.desktop.components;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -45,6 +43,7 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.UIManager;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableRowSorter;
 import org.apache.lucene.luke.app.IndexHandler;
@@ -133,7 +132,7 @@ public final class OverviewPanelProvider {
   public JPanel get() {
     panel.setOpaque(false);
     panel.setLayout(new GridLayout(1, 1));
-    panel.setBorder(BorderFactory.createLineBorder(Color.gray));
+    panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
     JSplitPane splitPane =
         new JSplitPane(JSplitPane.VERTICAL_SPLIT, initUpperPanel(), initLowerPanel());
@@ -306,6 +305,10 @@ public final class OverviewPanelProvider {
         null,
         TermCountsTableModel.Column.NAME.getColumnWidth(),
         TermCountsTableModel.Column.TERM_COUNT.getColumnWidth());
+    termCountsTable.setFont(UIManager.getFont("Table.font"));
+    termCountsTable.setRowHeight(
+        termCountsTable.getFontMetrics(termCountsTable.getFont()).getHeight() + 10);
+    termCountsTable.setShowGrid(false);
     JScrollPane scrollPane = new JScrollPane(termCountsTable);
     panel.add(scrollPane, BorderLayout.CENTER);
 
@@ -330,19 +333,14 @@ public final class OverviewPanelProvider {
     innerPanel1.add(new JLabel(MessageUtils.getLocalizedMessage("overview.label.selected_field")));
     innerPanel.add(innerPanel1);
 
-    selectedField.setColumns(20);
-    selectedField.setPreferredSize(new Dimension(100, 30));
-    selectedField.setFont(StyleConstants.FONT_MONOSPACE_LARGE);
+    selectedField.setColumns(12);
     selectedField.setEditable(false);
-    selectedField.setBackground(Color.white);
     JPanel innerPanel2 = new JPanel(new FlowLayout(FlowLayout.LEADING));
     innerPanel2.setOpaque(false);
     innerPanel2.add(selectedField);
     innerPanel.add(innerPanel2);
 
     showTopTermsBtn.setText(MessageUtils.getLocalizedMessage("overview.button.show_terms"));
-    showTopTermsBtn.setPreferredSize(new Dimension(170, 40));
-    showTopTermsBtn.setFont(StyleConstants.FONT_BUTTON_LARGE);
     showTopTermsBtn.addActionListener(listeners::showTopTerms);
     showTopTermsBtn.setEnabled(false);
     JPanel innerPanel3 = new JPanel(new FlowLayout(FlowLayout.LEADING));
@@ -356,7 +354,6 @@ public final class OverviewPanelProvider {
     innerPanel.add(innerPanel4);
 
     SpinnerNumberModel numberModel = new SpinnerNumberModel(50, 0, 1000, 1);
-    numTopTermsSpnr.setPreferredSize(new Dimension(80, 30));
     numTopTermsSpnr.setModel(numberModel);
     JPanel innerPanel5 = new JPanel(new FlowLayout(FlowLayout.LEADING));
     innerPanel5.setOpaque(false);
@@ -381,6 +378,10 @@ public final class OverviewPanelProvider {
         },
         TopTermsTableModel.Column.RANK.getColumnWidth(),
         TopTermsTableModel.Column.FREQ.getColumnWidth());
+    topTermsTable.setFont(UIManager.getFont("Table.font"));
+    topTermsTable.setRowHeight(
+        topTermsTable.getFontMetrics(topTermsTable.getFont()).getHeight() + 10);
+    topTermsTable.setShowGrid(false);
     JScrollPane scrollPane = new JScrollPane(topTermsTable);
     termsPanel.add(scrollPane, BorderLayout.CENTER);
 

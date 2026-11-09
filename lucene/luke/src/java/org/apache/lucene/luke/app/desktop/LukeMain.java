@@ -19,6 +19,7 @@ package org.apache.lucene.luke.app.desktop;
 
 import static org.apache.lucene.luke.app.desktop.util.ExceptionHandler.handle;
 
+import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.GraphicsEnvironment;
 import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
@@ -82,13 +83,7 @@ public class LukeMain {
       Runtime.getRuntime().exit(0);
     }
 
-    String lookAndFeelClassName = UIManager.getSystemLookAndFeelClassName();
-    if (!lookAndFeelClassName.contains("AquaLookAndFeel")
-        && !lookAndFeelClassName.contains("PlasticXPLookAndFeel")) {
-      // may be running on linux platform
-      lookAndFeelClassName = "javax.swing.plaf.metal.MetalLookAndFeel";
-    }
-    UIManager.setLookAndFeel(lookAndFeelClassName);
+    UIManager.setLookAndFeel(System.getProperty("swing.defaultlaf", FlatLightLaf.class.getName()));
 
     GraphicsEnvironment genv = GraphicsEnvironment.getLocalGraphicsEnvironment();
     genv.registerFont(FontUtils.createElegantIconFont());

@@ -25,6 +25,7 @@ ext {
 }
 
 dependencies {
+  moduleImplementation deps.flatlaf
   moduleApi project(':lucene:core')
 
   moduleImplementation project(':lucene:codecs')

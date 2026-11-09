@@ -12,6 +12,8 @@ commons-compress = "1.28.0"
 ecj = "3.46.100"
 # java linting
 errorprone = "2.50.0"
+# Luke desktop look and feel
+flatlaf = "3.8"
 # markdown documentation generation
 flexmark = "0.64.8"
 # @keep This is GJF version for java source code formatting
@@ -69,6 +71,7 @@ commons-codec = { module = "commons-codec:commons-codec", version.ref = "commons
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 ecj = { module = "org.eclipse.jdt:ecj", version.ref = "ecj" }
 errorprone = { module = "com.google.errorprone:error_prone_core", version.ref = "errorprone" }
+flatlaf = { module = "com.formdev:flatlaf", version.ref = "flatlaf" }
 flexmark-core = { module = "com.vladsch.flexmark:flexmark", version.ref = "flexmark" }
 flexmark-ext-abbreviation = { module = "com.vladsch.flexmark:flexmark-ext-abbreviation", version.ref = "flexmark" }
 flexmark-ext-attributes = { module = "com.vladsch.flexmark:flexmark-ext-attributes", version.ref = "flexmark" }
