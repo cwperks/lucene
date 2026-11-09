@@ -532,7 +532,7 @@ public final class OverviewPanelProvider {
       termCountsTable
           .getColumnModel()
           .getColumn(TermCountsTableModel.Column.NAME.getIndex())
-          .setMaxWidth(TermCountsTableModel.Column.NAME.getColumnWidth());
+          .setPreferredWidth(TermCountsTableModel.Column.NAME.getColumnWidth());
       termCountsTable
           .getColumnModel()
           .getColumn(TermCountsTableModel.Column.TERM_COUNT.getIndex())

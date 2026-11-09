@@ -27,7 +27,8 @@ Optimizations
 
 Bug Fixes
 ---------------------
-(No changes)
+* GITHUB#12187: Allow resizing Luke's Overview field-name column beyond its initial
+  width so that long field names can be displayed. (Craig Perkins)
 
 Other
 ---------------------
