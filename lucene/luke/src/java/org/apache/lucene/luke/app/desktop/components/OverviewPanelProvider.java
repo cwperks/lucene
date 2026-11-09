@@ -118,6 +118,15 @@ public final class OverviewPanelProvider {
     this.operatorRegistry = ComponentOperatorRegistry.getInstance();
     this.tabSwitcher = TabSwitcherProxy.getInstance();
 
+    termCountsTable
+        .getSelectionModel()
+        .addListSelectionListener(
+            event -> {
+              if (!event.getValueIsAdjusting()) {
+                selectField();
+              }
+            });
+
     IndexHandler.getInstance().addObserver(new Observer());
   }
 
@@ -294,12 +303,7 @@ public final class OverviewPanelProvider {
         termCountsTable,
         ListSelectionModel.SINGLE_SELECTION,
         new TermCountsTableModel(),
-        new MouseAdapter() {
-          @Override
-          public void mouseClicked(MouseEvent e) {
-            listeners.selectField(e);
-          }
-        },
+        null,
         TermCountsTableModel.Column.NAME.getColumnWidth(),
         TermCountsTableModel.Column.TERM_COUNT.getColumnWidth());
     JScrollPane scrollPane = new JScrollPane(termCountsTable);
@@ -404,9 +408,10 @@ public final class OverviewPanelProvider {
   // control methods
 
   private void selectField() {
-    String field = getSelectedField();
+    String field = termCountsTable.getSelectedRow() < 0 ? "" : getSelectedField();
     selectedField.setText(field);
-    showTopTermsBtn.setEnabled(true);
+    showTopTermsBtn.setEnabled(termCountsTable.getSelectedRow() >= 0);
+    topTermsTable.setModel(new TopTermsTableModel());
   }
 
   private void showTopTerms() {
@@ -473,10 +478,6 @@ public final class OverviewPanelProvider {
   }
 
   private class ListenerFunctions {
-
-    void selectField(MouseEvent e) {
-      OverviewPanelProvider.this.selectField();
-    }
 
     void showTopTerms(ActionEvent e) {
       OverviewPanelProvider.this.showTopTerms();

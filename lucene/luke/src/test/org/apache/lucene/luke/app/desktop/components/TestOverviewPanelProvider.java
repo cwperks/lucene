@@ -19,7 +19,10 @@ package org.apache.lucene.luke.app.desktop.components;
 
 import java.awt.Component;
 import java.awt.Container;
+import java.util.function.Predicate;
+import javax.swing.JButton;
 import javax.swing.JTable;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -27,10 +30,79 @@ import org.apache.lucene.document.StringField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.luke.app.IndexHandler;
+import org.apache.lucene.luke.app.desktop.util.MessageUtils;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.tests.util.LuceneTestCase;
 
+@LuceneTestCase.SuppressFileSystems("ExtrasFS")
 public class TestOverviewPanelProvider extends LuceneTestCase {
+
+  public void testFieldSelectionWithoutMouseClick() throws Exception {
+    var indexPath = createTempDir();
+    try (var directory = FSDirectory.open(indexPath);
+        var writer = new IndexWriter(directory, new IndexWriterConfig())) {
+      var document = new Document();
+      document.add(new StringField("city", "Toronto", Field.Store.NO));
+      document.add(new StringField("country", "Canada", Field.Store.NO));
+      writer.addDocument(document);
+    }
+    SwingUtilities.invokeAndWait(
+        () -> {
+          var panel = new OverviewPanelProvider().get();
+          var table = findTermCountsTable(panel);
+          var selectedField = findComponent(panel, JTextField.class, field -> !field.isEditable());
+          var showTerms =
+              findComponent(
+                  panel,
+                  JButton.class,
+                  button ->
+                      MessageUtils.getLocalizedMessage("overview.button.show_terms")
+                          .equals(button.getText()));
+          var handler = IndexHandler.getInstance();
+          try {
+            handler.open(indexPath.toString(), FSDirectory.class.getName());
+            assertFalse(showTerms.isEnabled());
+            table.setRowSelectionInterval(0, 0);
+            assertEquals(table.getValueAt(0, 0), selectedField.getText());
+            assertTrue(showTerms.isEnabled());
+            var terms =
+                findComponent(
+                    panel,
+                    JTable.class,
+                    candidate ->
+                        candidate.getModel() instanceof OverviewPanelProvider.TopTermsTableModel);
+            showTerms.doClick();
+            assertEquals(1, terms.getRowCount());
+            // Use the same action as the Down arrow, without dispatching a mouse click.
+            table
+                .getActionMap()
+                .get("selectNextRow")
+                .actionPerformed(new java.awt.event.ActionEvent(table, 0, "selectNextRow"));
+            assertEquals(1, table.getSelectedRow());
+            assertEquals(table.getValueAt(1, 0), selectedField.getText());
+            assertEquals(0, terms.getRowCount());
+            table.clearSelection();
+            assertEquals("", selectedField.getText());
+            assertFalse(showTerms.isEnabled());
+          } finally {
+            handler.close();
+          }
+        });
+  }
+
+  private static <T extends Component> T findComponent(
+      Component component, Class<T> type, Predicate<T> matches) {
+    if (type.isInstance(component) && matches.test(type.cast(component))) {
+      return type.cast(component);
+    }
+    if (component instanceof Container container) {
+      for (Component child : container.getComponents()) {
+        T found = findComponent(child, type, matches);
+        if (found != null) return found;
+      }
+    }
+    return null;
+  }
 
   public void testFieldNameColumnCanGrowAfterOpeningIndex() throws Exception {
     var indexPath = createTempDir();
