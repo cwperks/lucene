@@ -151,6 +151,9 @@ tasks.register("run", {
             ) {
           arg(value: '-jar')
           arg(value: file("${standaloneDistDir}/${standaloneJar.archiveFileName.get()}").absolutePath)
+          if (providers.gradleProperty("luke.experimentalUi").map { it.toBoolean() }.getOrElse(false)) {
+            arg(value: '--experimental-ui')
+          }
         }
   }
 })

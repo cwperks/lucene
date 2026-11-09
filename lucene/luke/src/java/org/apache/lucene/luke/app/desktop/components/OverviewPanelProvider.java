@@ -59,6 +59,7 @@ import org.apache.lucene.luke.models.overview.TermStats;
 
 /** Provider of the Overview panel */
 public final class OverviewPanelProvider {
+  private final boolean experimentalUi;
 
   private final OverviewFactory overviewFactory = new OverviewFactory();
 
@@ -110,6 +111,11 @@ public final class OverviewPanelProvider {
   private Overview overviewModel;
 
   public OverviewPanelProvider() {
+    this(false);
+  }
+
+  public OverviewPanelProvider(boolean experimentalUi) {
+    this.experimentalUi = experimentalUi;
     this.messageBroker = MessageBroker.getInstance();
     this.operatorRegistry = ComponentOperatorRegistry.getInstance();
     this.tabSwitcher = TabSwitcherProxy.getInstance();
@@ -127,6 +133,7 @@ public final class OverviewPanelProvider {
   }
 
   public JPanel get() {
+    if (!experimentalUi) return classicOverview();
     panel.setLayout(new BorderLayout(0, 16));
     panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
     panel.add(initHeader(), BorderLayout.NORTH);
@@ -137,6 +144,70 @@ public final class OverviewPanelProvider {
     workspace.setDividerLocation(340);
     workspace.setBorder(BorderFactory.createEmptyBorder());
     panel.add(workspace, BorderLayout.CENTER);
+    setUpTopTermsContextMenu();
+    return panel;
+  }
+
+  private JPanel classicOverview() {
+    panel.setOpaque(false);
+    panel.setLayout(new GridLayout(1, 1));
+    panel.setBorder(BorderFactory.createLineBorder(java.awt.Color.gray));
+    JPanel details = new JPanel(new java.awt.GridBagLayout());
+    details.setOpaque(false);
+    String[] keys = {
+      "index_path",
+      "num_fields",
+      "num_docs",
+      "num_terms",
+      "del_opt",
+      "index_version",
+      "index_format",
+      "dir_impl",
+      "commit_point",
+      "commit_userdata"
+    };
+    JLabel[] values = {
+      indexPathLbl,
+      numFieldsLbl,
+      numDocsLbl,
+      numTermsLbl,
+      delOptLbl,
+      indexVerLbl,
+      indexFmtLbl,
+      dirImplLbl,
+      commitPointLbl,
+      commitUserDataLbl
+    };
+    var constraints = new java.awt.GridBagConstraints();
+    constraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
+    constraints.insets = new java.awt.Insets(2, 10, 2, 2);
+    for (int row = 0; row < keys.length; row++) {
+      constraints.gridy = row;
+      constraints.gridx = 0;
+      constraints.weightx = 0.1;
+      details.add(
+          new JLabel(MessageUtils.getLocalizedMessage("overview.label." + keys[row]), JLabel.RIGHT),
+          constraints);
+      constraints.gridx = 1;
+      constraints.weightx = 0.9;
+      values[row].setText("?");
+      details.add(values[row], constraints);
+    }
+    JPanel lower = new JPanel(new BorderLayout());
+    lower.setOpaque(false);
+    lower.add(
+        new JLabel(MessageUtils.getLocalizedMessage("overview.label.select_fields")),
+        BorderLayout.NORTH);
+    var fieldsAndTerms =
+        new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, initTermCountsPanel(), initTopTermsPanel());
+    fieldsAndTerms.setDividerLocation(320);
+    fieldsAndTerms.setOpaque(false);
+    fieldsAndTerms.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    lower.add(fieldsAndTerms, BorderLayout.CENTER);
+    var split = new JSplitPane(JSplitPane.VERTICAL_SPLIT, details, lower);
+    split.setDividerLocation(0.4);
+    split.setOpaque(false);
+    panel.add(split);
     setUpTopTermsContextMenu();
     return panel;
   }
@@ -206,7 +277,12 @@ public final class OverviewPanelProvider {
     JPanel panel = new JPanel(new BorderLayout());
     panel.setOpaque(false);
 
-    JLabel label = new JLabel(MessageUtils.getLocalizedMessage("overview.label.available_fields"));
+    JLabel label =
+        new JLabel(
+            MessageUtils.getLocalizedMessage(
+                experimentalUi
+                    ? "overview.label.available_fields"
+                    : "overview.legacy.available_fields"));
     label.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
     JPanel heading = new JPanel(new BorderLayout(0, 8));
     heading.add(label, BorderLayout.NORTH);
@@ -236,7 +312,7 @@ public final class OverviewPanelProvider {
             });
     heading.add(fieldFilter, BorderLayout.CENTER);
     heading.add(fieldCount, BorderLayout.SOUTH);
-    panel.add(heading, BorderLayout.PAGE_START);
+    panel.add(experimentalUi ? heading : label, BorderLayout.PAGE_START);
 
     TableUtils.setupTable(
         termCountsTable,
@@ -245,10 +321,12 @@ public final class OverviewPanelProvider {
         null,
         TermCountsTableModel.Column.NAME.getColumnWidth(),
         TermCountsTableModel.Column.TERM_COUNT.getColumnWidth());
-    termCountsTable.setFont(UIManager.getFont("Table.font"));
-    termCountsTable.setRowHeight(
-        termCountsTable.getFontMetrics(termCountsTable.getFont()).getHeight() + 10);
-    termCountsTable.setShowGrid(false);
+    if (experimentalUi) {
+      termCountsTable.setFont(UIManager.getFont("Table.font"));
+      termCountsTable.setRowHeight(
+          termCountsTable.getFontMetrics(termCountsTable.getFont()).getHeight() + 10);
+      termCountsTable.setShowGrid(false);
+    }
     JScrollPane scrollPane = new JScrollPane(termCountsTable);
     panel.add(scrollPane, BorderLayout.CENTER);
 
@@ -261,7 +339,8 @@ public final class OverviewPanelProvider {
     termsPanel.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 0));
     JPanel header = new JPanel(new BorderLayout(0, 8));
     selectedField.setEditable(false);
-    selectedField.setFont(selectedField.getFont().deriveFont(java.awt.Font.BOLD, 16f));
+    if (experimentalUi)
+      selectedField.setFont(selectedField.getFont().deriveFont(java.awt.Font.BOLD, 16f));
     selectedField.putClientProperty(
         "JTextField.placeholderText", MessageUtils.getLocalizedMessage("overview.select_hint"));
     selectedField
@@ -271,7 +350,10 @@ public final class OverviewPanelProvider {
 
     JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEADING, 8, 0));
     numTopTermsSpnr.setModel(new SpinnerNumberModel(50, 0, 1000, 1));
-    JLabel limit = new JLabel(MessageUtils.getLocalizedMessage("overview.label.num_top_terms"));
+    JLabel limit =
+        new JLabel(
+            MessageUtils.getLocalizedMessage(
+                experimentalUi ? "overview.label.num_top_terms" : "overview.legacy.num_top_terms"));
     limit.setLabelFor(numTopTermsSpnr);
     toolbar.add(limit);
     toolbar.add(numTopTermsSpnr);
@@ -289,10 +371,12 @@ public final class OverviewPanelProvider {
         null,
         TopTermsTableModel.Column.RANK.getColumnWidth(),
         TopTermsTableModel.Column.FREQ.getColumnWidth());
-    topTermsTable.setFont(UIManager.getFont("Table.font"));
-    topTermsTable.setRowHeight(
-        topTermsTable.getFontMetrics(topTermsTable.getFont()).getHeight() + 12);
-    topTermsTable.setShowGrid(false);
+    if (experimentalUi) {
+      topTermsTable.setFont(UIManager.getFont("Table.font"));
+      topTermsTable.setRowHeight(
+          topTermsTable.getFontMetrics(topTermsTable.getFont()).getHeight() + 12);
+      topTermsTable.setShowGrid(false);
+    }
     topTermsTable.addMouseListener(
         new MouseAdapter() {
           @Override
@@ -300,6 +384,49 @@ public final class OverviewPanelProvider {
             listeners.showTopTermsContextMenu(event);
           }
         });
+    if (!experimentalUi) {
+      JPanel controls = new JPanel();
+      controls.setOpaque(false);
+      controls.setLayout(new javax.swing.BoxLayout(controls, javax.swing.BoxLayout.PAGE_AXIS));
+      controls.setBorder(BorderFactory.createEmptyBorder(20, 0, 0, 0));
+      selectedField.setColumns(20);
+      selectedField.setPreferredSize(new java.awt.Dimension(100, 30));
+      selectedField.setFont(StyleConstants.FONT_MONOSPACE_LARGE);
+      selectedField.setBackground(java.awt.Color.white);
+      showTopTermsBtn.setPreferredSize(new java.awt.Dimension(170, 40));
+      showTopTermsBtn.setFont(StyleConstants.FONT_BUTTON_LARGE);
+      numTopTermsSpnr.setPreferredSize(new java.awt.Dimension(80, 30));
+      for (java.awt.Component component :
+          new java.awt.Component[] {
+            new JLabel(MessageUtils.getLocalizedMessage("overview.label.selected_field")),
+            selectedField,
+            showTopTermsBtn,
+            limit,
+            numTopTermsSpnr
+          }) {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEADING));
+        row.setOpaque(false);
+        row.add(component);
+        controls.add(row);
+      }
+      JPanel controlsPanel = new JPanel(new BorderLayout());
+      controlsPanel.setOpaque(false);
+      controlsPanel.add(controls, BorderLayout.NORTH);
+      JPanel tablePanel = new JPanel(new BorderLayout());
+      tablePanel.setOpaque(false);
+      tablePanel.add(
+          new JLabel(MessageUtils.getLocalizedMessage("overview.label.top_terms")),
+          BorderLayout.NORTH);
+      tablePanel.add(new JScrollPane(topTermsTable), BorderLayout.CENTER);
+      var split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, controlsPanel, tablePanel);
+      split.setDividerLocation(180);
+      split.setOpaque(false);
+      split.setBorder(BorderFactory.createEmptyBorder());
+      JPanel result = new JPanel(new GridLayout(1, 1));
+      result.setOpaque(false);
+      result.add(split);
+      return result;
+    }
     termsPanel.add(new JScrollPane(topTermsTable), BorderLayout.CENTER);
     termsPanel.add(termsHint, BorderLayout.SOUTH);
     termsHint.setText(MessageUtils.getLocalizedMessage("overview.select_hint"));

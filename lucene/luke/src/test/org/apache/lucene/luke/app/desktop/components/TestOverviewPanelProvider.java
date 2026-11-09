@@ -44,6 +44,28 @@ public class TestOverviewPanelProvider extends LuceneTestCase {
 
   private static LookAndFeel previousLookAndFeel;
 
+  public void testDefaultLayoutAndNavigationIndices() throws Exception {
+    SwingUtilities.invokeAndWait(
+        () -> {
+          var panel = new OverviewPanelProvider().get();
+          assertNull(
+              findComponent(
+                  panel, JTextField.class, field -> "fieldFilter".equals(field.getName())));
+          assertTrue(panel.getComponent(0) instanceof javax.swing.JSplitPane);
+          assertEquals(
+              javax.swing.JSplitPane.VERTICAL_SPLIT,
+              ((javax.swing.JSplitPane) panel.getComponent(0)).getOrientation());
+        });
+    assertEquals(0, TabbedPaneProvider.Tab.OVERVIEW.index(false));
+    assertEquals(1, TabbedPaneProvider.Tab.DOCUMENTS.index(false));
+    assertEquals(2, TabbedPaneProvider.Tab.SEARCH.index(false));
+    assertEquals(3, TabbedPaneProvider.Tab.ANALYZER.index(false));
+    assertEquals(4, TabbedPaneProvider.Tab.COMMITS.index(false));
+    assertEquals(1, TabbedPaneProvider.Tab.FIELDS.index(true));
+    assertEquals(2, TabbedPaneProvider.Tab.DOCUMENTS.index(true));
+    expectThrows(IllegalArgumentException.class, () -> TabbedPaneProvider.Tab.FIELDS.index(false));
+  }
+
   @BeforeClass
   public static void installTheme() throws Exception {
     previousLookAndFeel = UIManager.getLookAndFeel();
@@ -67,7 +89,7 @@ public class TestOverviewPanelProvider extends LuceneTestCase {
     }
     SwingUtilities.invokeAndWait(
         () -> {
-          var panel = new OverviewPanelProvider().get();
+          var panel = new OverviewPanelProvider(true).get();
           var table = findTermCountsTable(panel);
           var selectedField = findComponent(panel, JTextField.class, field -> !field.isEditable());
           var showTerms =
@@ -161,7 +183,7 @@ public class TestOverviewPanelProvider extends LuceneTestCase {
 
     SwingUtilities.invokeAndWait(
         () -> {
-          var panel = new OverviewPanelProvider().get();
+          var panel = new OverviewPanelProvider(true).get();
           var table = findTermCountsTable(panel);
           assertNotNull(table);
           var handler = IndexHandler.getInstance();

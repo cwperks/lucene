@@ -55,13 +55,13 @@ public class LukeMain {
   /**
    * @return Returns {@code true} if GUI startup and initialization was successful.
    */
-  private static boolean createGUI() {
+  private static boolean createGUI(boolean experimentalUi) {
     // uncaught error handler
     MessageBroker messageBroker = MessageBroker.getInstance();
     try {
       Thread.setDefaultUncaughtExceptionHandler((_, cause) -> handle(cause, messageBroker));
 
-      frame = new LukeWindowProvider().get();
+      frame = new LukeWindowProvider(experimentalUi).get();
       frame.setLocation(200, 100);
       frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
       frame.pack();
@@ -77,13 +77,21 @@ public class LukeMain {
 
   public static void main(String[] args) throws Exception {
     boolean sanityCheck = Arrays.asList(args).contains("--sanity-check");
+    boolean experimentalUi = Arrays.asList(args).contains("--experimental-ui");
 
     if (sanityCheck && GraphicsEnvironment.isHeadless()) {
       Logger.getGlobal().log(Level.SEVERE, "[Vader] Hello, Luke. Can't do much in headless mode.");
       Runtime.getRuntime().exit(0);
     }
 
-    UIManager.setLookAndFeel(System.getProperty("swing.defaultlaf", FlatLightLaf.class.getName()));
+    String lookAndFeel = UIManager.getSystemLookAndFeelClassName();
+    if (experimentalUi) {
+      lookAndFeel = System.getProperty("swing.defaultlaf", FlatLightLaf.class.getName());
+    } else if (!lookAndFeel.contains("AquaLookAndFeel")
+        && !lookAndFeel.contains("PlasticXPLookAndFeel")) {
+      lookAndFeel = "javax.swing.plaf.metal.MetalLookAndFeel";
+    }
+    UIManager.setLookAndFeel(lookAndFeel);
 
     GraphicsEnvironment genv = GraphicsEnvironment.getLocalGraphicsEnvironment();
     genv.registerFont(FontUtils.createElegantIconFont());
@@ -93,7 +101,7 @@ public class LukeMain {
         () -> {
           try {
             long _start = System.nanoTime();
-            guiThreadResult.put(createGUI());
+            guiThreadResult.put(createGUI(experimentalUi));
 
             // Show the initial dialog.
             OpenIndexDialogFactory openIndexDialogFactory = OpenIndexDialogFactory.getInstance();

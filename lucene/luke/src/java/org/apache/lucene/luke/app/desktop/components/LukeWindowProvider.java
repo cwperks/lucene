@@ -52,6 +52,7 @@ public final class LukeWindowProvider implements LukeWindowOperator {
       MessageUtils.getLocalizedMessage("window.title") + " - v" + Version.LATEST.toString();
 
   private final Preferences prefs;
+  private final boolean experimentalUi;
 
   private final MessageBroker messageBroker;
 
@@ -73,9 +74,14 @@ public final class LukeWindowProvider implements LukeWindowOperator {
   private JFrame frame = new JFrame();
 
   public LukeWindowProvider() throws IOException {
+    this(false);
+  }
+
+  public LukeWindowProvider(boolean experimentalUi) throws IOException {
+    this.experimentalUi = experimentalUi;
     this.prefs = PreferencesFactory.getInstance();
     this.menuBar = new MenuBarProvider().get();
-    this.tabbedPane = new TabbedPaneProvider().get();
+    this.tabbedPane = new TabbedPaneProvider(experimentalUi).get();
     this.messageBroker = MessageBroker.getInstance();
     this.tabSwitcher = TabSwitcherProxy.getInstance();
 
@@ -92,19 +98,22 @@ public final class LukeWindowProvider implements LukeWindowOperator {
     frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
     frame.setJMenuBar(menuBar);
-    JPanel heading = new JPanel(new BorderLayout(12, 0));
-    heading.setBorder(BorderFactory.createEmptyBorder(18, 24, 18, 24));
-    JLabel brand = new JLabel("LUKE");
-    brand.setFont(brand.getFont().deriveFont(java.awt.Font.BOLD, 22f));
-    heading.add(brand, BorderLayout.WEST);
-    heading.add(
-        new JLabel(MessageUtils.getLocalizedMessage("explorer.app_subtitle")), BorderLayout.CENTER);
-    heading.add(indexContext, BorderLayout.EAST);
-    frame.add(heading, BorderLayout.NORTH);
+    if (experimentalUi) {
+      JPanel heading = new JPanel(new BorderLayout(12, 0));
+      heading.setBorder(BorderFactory.createEmptyBorder(18, 24, 18, 24));
+      JLabel brand = new JLabel("LUKE");
+      brand.setFont(brand.getFont().deriveFont(java.awt.Font.BOLD, 22f));
+      heading.add(brand, BorderLayout.WEST);
+      heading.add(
+          new JLabel(MessageUtils.getLocalizedMessage("explorer.app_subtitle")),
+          BorderLayout.CENTER);
+      heading.add(indexContext, BorderLayout.EAST);
+      frame.add(heading, BorderLayout.NORTH);
+    }
     frame.add(initMainPanel(), BorderLayout.CENTER);
     frame.add(initMessagePanel(), BorderLayout.PAGE_END);
 
-    frame.setPreferredSize(new Dimension(1280, 850));
+    frame.setPreferredSize(experimentalUi ? new Dimension(1280, 850) : new Dimension(950, 680));
     frame.getContentPane().setBackground(prefs.getColorTheme().getBackgroundColor());
 
     return frame;
@@ -113,11 +122,12 @@ public final class LukeWindowProvider implements LukeWindowOperator {
   private JPanel initMainPanel() {
     JPanel panel = new JPanel(new GridLayout(1, 1));
 
-    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.OVERVIEW.index(), false);
-    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.FIELDS.index(), false);
-    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.DOCUMENTS.index(), false);
-    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.SEARCH.index(), false);
-    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.COMMITS.index(), false);
+    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.OVERVIEW.index(experimentalUi), false);
+    if (experimentalUi)
+      tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.FIELDS.index(experimentalUi), false);
+    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.DOCUMENTS.index(experimentalUi), false);
+    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.SEARCH.index(experimentalUi), false);
+    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.COMMITS.index(experimentalUi), false);
 
     panel.add(tabbedPane);
 
@@ -132,9 +142,13 @@ public final class LukeWindowProvider implements LukeWindowOperator {
 
     JPanel innerPanel = new JPanel(new GridBagLayout());
     innerPanel.setOpaque(false);
-    innerPanel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
-    innerPanel.setOpaque(true);
-    innerPanel.setBackground(UIManager.getColor("Panel.background"));
+    if (experimentalUi) {
+      innerPanel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+      innerPanel.setOpaque(true);
+      innerPanel.setBackground(UIManager.getColor("Panel.background"));
+    } else {
+      innerPanel.setBorder(BorderFactory.createLineBorder(java.awt.Color.gray));
+    }
     GridBagConstraints c = new GridBagConstraints();
     c.fill = GridBagConstraints.HORIZONTAL;
 
