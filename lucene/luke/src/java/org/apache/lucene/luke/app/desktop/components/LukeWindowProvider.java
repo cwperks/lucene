@@ -18,7 +18,6 @@
 package org.apache.lucene.luke.app.desktop.components;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
@@ -31,6 +30,7 @@ import javax.swing.JLabel;
 import javax.swing.JMenuBar;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
+import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import org.apache.lucene.luke.app.DirectoryHandler;
 import org.apache.lucene.luke.app.DirectoryObserver;
@@ -52,6 +52,7 @@ public final class LukeWindowProvider implements LukeWindowOperator {
       MessageUtils.getLocalizedMessage("window.title") + " - v" + Version.LATEST.toString();
 
   private final Preferences prefs;
+  private final boolean experimentalUi;
 
   private final MessageBroker messageBroker;
 
@@ -62,6 +63,7 @@ public final class LukeWindowProvider implements LukeWindowOperator {
   private final JTabbedPane tabbedPane;
 
   private final JLabel messageLbl = new JLabel();
+  private final JLabel indexContext = new JLabel();
 
   private final JLabel multiIcon = new JLabel();
 
@@ -72,9 +74,14 @@ public final class LukeWindowProvider implements LukeWindowOperator {
   private JFrame frame = new JFrame();
 
   public LukeWindowProvider() throws IOException {
+    this(false);
+  }
+
+  public LukeWindowProvider(boolean experimentalUi) throws IOException {
+    this.experimentalUi = experimentalUi;
     this.prefs = PreferencesFactory.getInstance();
     this.menuBar = new MenuBarProvider().get();
-    this.tabbedPane = new TabbedPaneProvider().get();
+    this.tabbedPane = new TabbedPaneProvider(experimentalUi).get();
     this.messageBroker = MessageBroker.getInstance();
     this.tabSwitcher = TabSwitcherProxy.getInstance();
 
@@ -89,12 +96,34 @@ public final class LukeWindowProvider implements LukeWindowOperator {
   public JFrame get() {
     frame.setTitle(WINDOW_TITLE);
     frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+    var applicationIcon = ImageUtils.createApplicationIcon();
+    frame.setIconImage(applicationIcon);
+    if (java.awt.Taskbar.isTaskbarSupported()) {
+      var taskbar = java.awt.Taskbar.getTaskbar();
+      if (taskbar.isSupported(java.awt.Taskbar.Feature.ICON_IMAGE)) {
+        taskbar.setIconImage(applicationIcon);
+      }
+    }
 
     frame.setJMenuBar(menuBar);
+    if (experimentalUi) {
+      JPanel heading = new JPanel(new BorderLayout(12, 0));
+      heading.setBorder(BorderFactory.createEmptyBorder(18, 24, 18, 24));
+      JLabel brand = new JLabel("LUKE");
+      brand.setIcon(ImageUtils.createImageIcon("lucene-logo.png", "Apache Lucene", 143, 32));
+      brand.setIconTextGap(20);
+      brand.setFont(brand.getFont().deriveFont(java.awt.Font.BOLD, 22f));
+      heading.add(brand, BorderLayout.WEST);
+      heading.add(
+          new JLabel(MessageUtils.getLocalizedMessage("explorer.app_subtitle")),
+          BorderLayout.CENTER);
+      heading.add(indexContext, BorderLayout.EAST);
+      frame.add(heading, BorderLayout.NORTH);
+    }
     frame.add(initMainPanel(), BorderLayout.CENTER);
     frame.add(initMessagePanel(), BorderLayout.PAGE_END);
 
-    frame.setPreferredSize(new Dimension(950, 680));
+    frame.setPreferredSize(experimentalUi ? new Dimension(1280, 850) : new Dimension(950, 680));
     frame.getContentPane().setBackground(prefs.getColorTheme().getBackgroundColor());
 
     return frame;
@@ -103,10 +132,12 @@ public final class LukeWindowProvider implements LukeWindowOperator {
   private JPanel initMainPanel() {
     JPanel panel = new JPanel(new GridLayout(1, 1));
 
-    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.OVERVIEW.index(), false);
-    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.DOCUMENTS.index(), false);
-    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.SEARCH.index(), false);
-    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.COMMITS.index(), false);
+    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.OVERVIEW.index(experimentalUi), false);
+    if (experimentalUi)
+      tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.FIELDS.index(experimentalUi), false);
+    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.DOCUMENTS.index(experimentalUi), false);
+    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.SEARCH.index(experimentalUi), false);
+    tabbedPane.setEnabledAt(TabbedPaneProvider.Tab.COMMITS.index(experimentalUi), false);
 
     panel.add(tabbedPane);
 
@@ -121,7 +152,13 @@ public final class LukeWindowProvider implements LukeWindowOperator {
 
     JPanel innerPanel = new JPanel(new GridBagLayout());
     innerPanel.setOpaque(false);
-    innerPanel.setBorder(BorderFactory.createLineBorder(Color.gray));
+    if (experimentalUi) {
+      innerPanel.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+      innerPanel.setOpaque(true);
+      innerPanel.setBackground(UIManager.getColor("Panel.background"));
+    } else {
+      innerPanel.setBorder(BorderFactory.createLineBorder(java.awt.Color.gray));
+    }
     GridBagConstraints c = new GridBagConstraints();
     c.fill = GridBagConstraints.HORIZONTAL;
 
@@ -193,6 +230,10 @@ public final class LukeWindowProvider implements LukeWindowOperator {
 
     @Override
     public void openIndex(LukeState state) {
+      java.nio.file.Path path = java.nio.file.Path.of(state.getIndexPath());
+      indexContext.setText(
+          path.getFileName() == null ? path.toString() : path.getFileName().toString());
+      indexContext.setToolTipText(state.getIndexPath());
       multiIcon.setVisible(!state.hasDirectoryReader());
       readOnlyIcon.setVisible(state.readOnly());
       noReaderIcon.setVisible(false);
@@ -210,6 +251,8 @@ public final class LukeWindowProvider implements LukeWindowOperator {
 
     @Override
     public void closeIndex() {
+      indexContext.setText("");
+      indexContext.setToolTipText(null);
       multiIcon.setVisible(false);
       readOnlyIcon.setVisible(false);
       noReaderIcon.setVisible(false);

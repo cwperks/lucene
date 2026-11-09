@@ -18,6 +18,7 @@
 package org.apache.lucene.luke.app.desktop.components;
 
 import java.io.IOException;
+import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import org.apache.lucene.luke.app.DirectoryHandler;
@@ -26,17 +27,31 @@ import org.apache.lucene.luke.app.IndexHandler;
 import org.apache.lucene.luke.app.IndexObserver;
 import org.apache.lucene.luke.app.LukeState;
 import org.apache.lucene.luke.app.desktop.MessageBroker;
+import org.apache.lucene.luke.app.desktop.Preferences;
+import org.apache.lucene.luke.app.desktop.PreferencesFactory;
+import org.apache.lucene.luke.app.desktop.util.ExceptionHandler;
 import org.apache.lucene.luke.app.desktop.util.FontUtils;
+import org.apache.lucene.luke.app.desktop.util.MessageUtils;
 import org.apache.lucene.luke.app.desktop.util.TabUtils;
 
 /** Provider of the Tabbed pane */
 public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
 
+  private static final String[] NAVIGATION_ICONS = {
+    "&#xe009;", "&#xe025;", "&#x69;", "&#xe101;", "&#xe104;", "&#xe0ea;", "&#xe058;"
+  };
+
+  private final JButton sidebarToggle = new JButton();
+  private final Preferences preferences;
+  private boolean sidebarCollapsed;
+
   private final MessageBroker messageBroker;
+  private final boolean experimentalUi;
 
   private final JTabbedPane tabbedPane;
 
   private final JPanel overviewPanel;
+  private final JPanel fieldsPanel;
 
   private final JPanel documentsPanel;
 
@@ -49,9 +64,34 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
   private final JPanel logsPanel;
 
   public TabbedPaneProvider() throws IOException {
-    this.tabbedPane = new JTabbedPane();
+    this(false);
+  }
 
-    this.overviewPanel = new OverviewPanelProvider().get();
+  public TabbedPaneProvider(boolean experimentalUi) throws IOException {
+    this.experimentalUi = experimentalUi;
+    this.preferences = experimentalUi ? PreferencesFactory.getInstance() : null;
+    this.tabbedPane = new JTabbedPane(experimentalUi ? JTabbedPane.LEFT : JTabbedPane.TOP);
+    if (experimentalUi) {
+      tabbedPane.setOpaque(true);
+      tabbedPane.setBackground(new java.awt.Color(0x172B3A));
+      tabbedPane.setForeground(new java.awt.Color(0xE2E8F0));
+      tabbedPane.setFont(tabbedPane.getFont().deriveFont(java.awt.Font.BOLD, 14f));
+      tabbedPane.putClientProperty(
+          "FlatLaf.style",
+          "selectedBackground: #244B52; selectedForeground: #FFFFFF;"
+              + " hoverColor: #223E4B; hoverForeground: #FFFFFF;"
+              + " focusColor: #244B52; focusForeground: #FFFFFF;"
+              + " disabledForeground: #94A3B8; underlineColor: #5EEAD4;"
+              + " inactiveUnderlineColor: #5EEAD4; tabSelectionHeight: 3");
+      tabbedPane.putClientProperty("JTabbedPane.minimumTabWidth", 180);
+      tabbedPane.putClientProperty("JTabbedPane.tabHeight", 52);
+      tabbedPane.putClientProperty("JTabbedPane.tabAlignment", "leading");
+      tabbedPane.putClientProperty("JTabbedPane.tabType", "underlined");
+      tabbedPane.putClientProperty("JTabbedPane.showContentSeparator", false);
+    }
+
+    this.overviewPanel = new OverviewPanelProvider(experimentalUi).get();
+    this.fieldsPanel = experimentalUi ? new FieldsPanelProvider().get() : null;
     this.documentsPanel = new DocumentsPanelProvider().get();
     this.searchPanel = new SearchPanelProvider().get();
     this.analysisPanel = new AnalysisPanelProvider().get();
@@ -68,21 +108,82 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
   }
 
   public JTabbedPane get() {
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe009;", "Overview"), overviewPanel);
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#x69;", "Documents"), documentsPanel);
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe101;", "Search"), searchPanel);
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe104;", "Analysis"), analysisPanel);
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe0ea;", "Commits"), commitsPanel);
-    tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe058;", "Logs"), logsPanel);
+    if (!experimentalUi) {
+      tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe009;", "Overview"), overviewPanel);
+      tabbedPane.addTab(FontUtils.elegantIconHtml("&#x69;", "Documents"), documentsPanel);
+      tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe101;", "Search"), searchPanel);
+      tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe104;", "Analysis"), analysisPanel);
+      tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe0ea;", "Commits"), commitsPanel);
+      tabbedPane.addTab(FontUtils.elegantIconHtml("&#xe058;", "Logs"), logsPanel);
+      TabUtils.forceTransparent(tabbedPane);
+      return tabbedPane;
+    }
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.overview"), overviewPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.fields"), fieldsPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.documents"), documentsPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.search"), searchPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.analysis"), analysisPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.commits"), commitsPanel);
+    tabbedPane.addTab(MessageUtils.getLocalizedMessage("navigation.logs"), logsPanel);
 
-    TabUtils.forceTransparent(tabbedPane);
+    // Legacy screens contain transparent panels; only the navigation rail should be dark.
+    for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+      tabbedPane.setToolTipTextAt(i, tabbedPane.getTitleAt(i));
+      JPanel content = (JPanel) tabbedPane.getComponentAt(i);
+      content.setOpaque(true);
+      content.setBackground(javax.swing.UIManager.getColor("Panel.background"));
+    }
+
+    sidebarToggle.setName("sidebarToggle");
+    sidebarToggle.setBackground(tabbedPane.getBackground());
+    sidebarToggle.setForeground(tabbedPane.getForeground());
+    sidebarToggle.putClientProperty("JButton.buttonType", "toolBarButton");
+    sidebarToggle.setPreferredSize(new java.awt.Dimension(56, 44));
+    sidebarToggle.addActionListener(
+        _ -> {
+          setSidebarCollapsed(!sidebarCollapsed);
+          try {
+            preferences.setSidebarCollapsed(sidebarCollapsed);
+          } catch (IOException e) {
+            ExceptionHandler.handle(e, messageBroker);
+          }
+        });
+    tabbedPane.putClientProperty("JTabbedPane.leadingComponent", sidebarToggle);
+    setSidebarCollapsed(preferences.isSidebarCollapsed());
 
     return tabbedPane;
   }
 
+  void setSidebarCollapsed(boolean collapsed) {
+    sidebarCollapsed = collapsed;
+    tabbedPane.putClientProperty("JTabbedPane.minimumTabWidth", collapsed ? 56 : 180);
+    tabbedPane.putClientProperty("JTabbedPane.maximumTabWidth", collapsed ? 56 : 180);
+    tabbedPane.putClientProperty("JTabbedPane.tabAlignment", collapsed ? "center" : "leading");
+    for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+      String label = tabbedPane.getToolTipTextAt(i);
+      tabbedPane.setTitleAt(
+          i,
+          collapsed
+              ? FontUtils.elegantIconHtml(NAVIGATION_ICONS[i])
+              : FontUtils.elegantIconHtml(NAVIGATION_ICONS[i], label));
+      tabbedPane
+          .getAccessibleContext()
+          .getAccessibleChild(i)
+          .getAccessibleContext()
+          .setAccessibleName(label);
+    }
+    String action =
+        MessageUtils.getLocalizedMessage(collapsed ? "navigation.expand" : "navigation.collapse");
+    sidebarToggle.setText(collapsed ? "›" : "‹  " + action);
+    sidebarToggle.setToolTipText(action);
+    sidebarToggle.getAccessibleContext().setAccessibleName(action);
+    tabbedPane.revalidate();
+    tabbedPane.repaint();
+  }
+
   @Override
   public void switchTab(Tab tab) {
-    tabbedPane.setSelectedIndex(tab.index());
+    tabbedPane.setSelectedIndex(tab.index(experimentalUi));
     tabbedPane.setVisible(false);
     tabbedPane.setVisible(true);
     messageBroker.clearStatusMessage();
@@ -92,41 +193,46 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
 
     @Override
     public void openDirectory(LukeState state) {
-      tabbedPane.setEnabledAt(Tab.COMMITS.index(), true);
+      tabbedPane.setEnabledAt(Tab.COMMITS.index(experimentalUi), true);
     }
 
     @Override
     public void closeDirectory() {
-      tabbedPane.setEnabledAt(Tab.OVERVIEW.index(), false);
-      tabbedPane.setEnabledAt(Tab.DOCUMENTS.index(), false);
-      tabbedPane.setEnabledAt(Tab.SEARCH.index(), false);
-      tabbedPane.setEnabledAt(Tab.COMMITS.index(), false);
+      if (experimentalUi) tabbedPane.setEnabledAt(Tab.FIELDS.index(experimentalUi), false);
+      tabbedPane.setEnabledAt(Tab.OVERVIEW.index(experimentalUi), false);
+      tabbedPane.setEnabledAt(Tab.DOCUMENTS.index(experimentalUi), false);
+      tabbedPane.setEnabledAt(Tab.SEARCH.index(experimentalUi), false);
+      tabbedPane.setEnabledAt(Tab.COMMITS.index(experimentalUi), false);
     }
 
     @Override
     public void openIndex(LukeState state) {
-      tabbedPane.setEnabledAt(Tab.OVERVIEW.index(), true);
-      tabbedPane.setEnabledAt(Tab.DOCUMENTS.index(), true);
-      tabbedPane.setEnabledAt(Tab.SEARCH.index(), true);
-      tabbedPane.setEnabledAt(Tab.COMMITS.index(), true);
+      if (experimentalUi) tabbedPane.setEnabledAt(Tab.FIELDS.index(experimentalUi), true);
+      tabbedPane.setEnabledAt(Tab.OVERVIEW.index(experimentalUi), true);
+      tabbedPane.setEnabledAt(Tab.DOCUMENTS.index(experimentalUi), true);
+      tabbedPane.setEnabledAt(Tab.SEARCH.index(experimentalUi), true);
+      tabbedPane.setEnabledAt(Tab.COMMITS.index(experimentalUi), true);
+      if (experimentalUi) switchTab(Tab.FIELDS);
     }
 
     @Override
     public void closeIndex() {
-      tabbedPane.setEnabledAt(Tab.OVERVIEW.index(), false);
-      tabbedPane.setEnabledAt(Tab.DOCUMENTS.index(), false);
-      tabbedPane.setEnabledAt(Tab.SEARCH.index(), false);
-      tabbedPane.setEnabledAt(Tab.COMMITS.index(), false);
+      if (experimentalUi) tabbedPane.setEnabledAt(Tab.FIELDS.index(experimentalUi), false);
+      tabbedPane.setEnabledAt(Tab.OVERVIEW.index(experimentalUi), false);
+      tabbedPane.setEnabledAt(Tab.DOCUMENTS.index(experimentalUi), false);
+      tabbedPane.setEnabledAt(Tab.SEARCH.index(experimentalUi), false);
+      tabbedPane.setEnabledAt(Tab.COMMITS.index(experimentalUi), false);
     }
   }
 
   /** tabs in the main frame */
   public enum Tab {
     OVERVIEW(0),
-    DOCUMENTS(1),
-    SEARCH(2),
-    ANALYZER(3),
-    COMMITS(4);
+    FIELDS(1),
+    DOCUMENTS(2),
+    SEARCH(3),
+    ANALYZER(4),
+    COMMITS(5);
 
     private int tabIdx;
 
@@ -134,8 +240,11 @@ public final class TabbedPaneProvider implements TabSwitcherProxy.TabSwitcher {
       this.tabIdx = tabIdx;
     }
 
-    int index() {
-      return tabIdx;
+    int index(boolean experimentalUi) {
+      if (!experimentalUi && this == FIELDS) {
+        throw new IllegalArgumentException("Fields requires --experimental-ui");
+      }
+      return experimentalUi || tabIdx == 0 ? tabIdx : tabIdx - 1;
     }
   }
 }

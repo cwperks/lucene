@@ -52,6 +52,10 @@ public interface Preferences {
 
   void setColorTheme(ColorTheme theme) throws IOException;
 
+  boolean isSidebarCollapsed();
+
+  void setSidebarCollapsed(boolean collapsed) throws IOException;
+
   /** color themes */
   enum ColorTheme {
 

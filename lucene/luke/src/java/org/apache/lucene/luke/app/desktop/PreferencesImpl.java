@@ -111,6 +111,17 @@ public final class PreferencesImpl implements Preferences {
   }
 
   @Override
+  public boolean isSidebarCollapsed() {
+    return Boolean.TRUE.equals(ini.getBoolean("settings", "sidebarCollapsed"));
+  }
+
+  @Override
+  public void setSidebarCollapsed(boolean collapsed) throws IOException {
+    ini.put("settings", "sidebarCollapsed", collapsed);
+    ini.store(iniFile());
+  }
+
+  @Override
   public String getDirImpl() {
     String dirImpl = ini.getString("opener", "dirImpl");
     return (dirImpl == null) ? FSDirectory.class.getName() : dirImpl;

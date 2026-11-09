@@ -17,6 +17,7 @@
 
 /** Luke : Lucene toolbox project. */
 module org.apache.lucene.luke {
+  requires com.formdev.flatlaf;
   requires java.desktop;
   requires java.logging;
   requires org.apache.lucene.core;

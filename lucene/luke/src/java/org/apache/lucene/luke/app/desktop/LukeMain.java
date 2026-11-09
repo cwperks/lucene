@@ -19,9 +19,11 @@ package org.apache.lucene.luke.app.desktop;
 
 import static org.apache.lucene.luke.app.desktop.util.ExceptionHandler.handle;
 
+import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.GraphicsEnvironment;
 import java.lang.invoke.MethodHandles;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -54,13 +56,13 @@ public class LukeMain {
   /**
    * @return Returns {@code true} if GUI startup and initialization was successful.
    */
-  private static boolean createGUI() {
+  private static boolean createGUI(boolean experimentalUi) {
     // uncaught error handler
     MessageBroker messageBroker = MessageBroker.getInstance();
     try {
       Thread.setDefaultUncaughtExceptionHandler((_, cause) -> handle(cause, messageBroker));
 
-      frame = new LukeWindowProvider().get();
+      frame = new LukeWindowProvider(experimentalUi).get();
       frame.setLocation(200, 100);
       frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
       frame.pack();
@@ -76,19 +78,25 @@ public class LukeMain {
 
   public static void main(String[] args) throws Exception {
     boolean sanityCheck = Arrays.asList(args).contains("--sanity-check");
+    boolean experimentalUi = Arrays.asList(args).contains("--experimental-ui");
 
     if (sanityCheck && GraphicsEnvironment.isHeadless()) {
       Logger.getGlobal().log(Level.SEVERE, "[Vader] Hello, Luke. Can't do much in headless mode.");
       Runtime.getRuntime().exit(0);
     }
 
-    String lookAndFeelClassName = UIManager.getSystemLookAndFeelClassName();
-    if (!lookAndFeelClassName.contains("AquaLookAndFeel")
-        && !lookAndFeelClassName.contains("PlasticXPLookAndFeel")) {
-      // may be running on linux platform
-      lookAndFeelClassName = "javax.swing.plaf.metal.MetalLookAndFeel";
+    String lookAndFeel = UIManager.getSystemLookAndFeelClassName();
+    if (experimentalUi) {
+      lookAndFeel = System.getProperty("swing.defaultlaf", FlatLightLaf.class.getName());
+    } else if (!lookAndFeel.contains("AquaLookAndFeel")
+        && !lookAndFeel.contains("PlasticXPLookAndFeel")) {
+      lookAndFeel = "javax.swing.plaf.metal.MetalLookAndFeel";
     }
-    UIManager.setLookAndFeel(lookAndFeelClassName);
+    if (experimentalUi && lookAndFeel.equals(FlatLightLaf.class.getName())) {
+      UIManager.setLookAndFeel(experimentalLookAndFeel());
+    } else {
+      UIManager.setLookAndFeel(lookAndFeel);
+    }
 
     GraphicsEnvironment genv = GraphicsEnvironment.getLocalGraphicsEnvironment();
     genv.registerFont(FontUtils.createElegantIconFont());
@@ -98,7 +106,7 @@ public class LukeMain {
         () -> {
           try {
             long _start = System.nanoTime();
-            guiThreadResult.put(createGUI());
+            guiThreadResult.put(createGUI(experimentalUi));
 
             // Show the initial dialog.
             OpenIndexDialogFactory openIndexDialogFactory = OpenIndexDialogFactory.getInstance();
@@ -129,5 +137,36 @@ public class LukeMain {
       Logger.getGlobal().log(Level.SEVERE, "[Vader] Hello, Luke. We seem to be fine.");
       Runtime.getRuntime().exit(0);
     }
+  }
+
+  private static FlatLightLaf experimentalLookAndFeel() {
+    var theme = new FlatLightLaf();
+    // Keep the palette scoped to this look and feel; classic Luke and overrides are untouched.
+    theme.setExtraDefaults(
+        Map.ofEntries(
+            Map.entry("@background", "#F3F6FA"),
+            Map.entry("@foreground", "#243247"),
+            Map.entry("Label.disabledForeground", "#52647A"),
+            Map.entry("@accentColor", "#0F766E"),
+            Map.entry("@selectionBackground", "#CCFBF1"),
+            Map.entry("@selectionForeground", "#134E4A"),
+            Map.entry("Component.arc", "12"),
+            Map.entry("Button.arc", "12"),
+            Map.entry("TextComponent.arc", "12"),
+            Map.entry("Component.focusWidth", "1"),
+            Map.entry("Component.borderColor", "#CBD5E1"),
+            Map.entry("TableHeader.background", "#E8EEF5"),
+            Map.entry("TableHeader.foreground", "#334155"),
+            Map.entry("Table.selectionInactiveBackground", "#CCFBF1"),
+            Map.entry("Table.selectionInactiveForeground", "#134E4A"),
+            Map.entry("List.selectionInactiveBackground", "#CCFBF1"),
+            Map.entry("List.selectionInactiveForeground", "#134E4A"),
+            Map.entry("List.selectionArc", "10"),
+            Map.entry("List.selectionInsets", "2,4,2,4"),
+            Map.entry("TabbedPane.selectedBackground", "#CCFBF1"),
+            Map.entry("TabbedPane.underlineColor", "#0F766E"),
+            Map.entry("ScrollBar.trackArc", "999"),
+            Map.entry("ScrollBar.thumbArc", "999")));
+    return theme;
   }
 }

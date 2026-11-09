@@ -17,11 +17,33 @@
 
 package org.apache.lucene.luke.app.desktop.util;
 
+import java.awt.Color;
 import java.awt.Image;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import javax.swing.ImageIcon;
 
 /** Image utilities */
 public class ImageUtils {
+
+  /** Preserve the wordmark's proportions inside a square window/taskbar icon. */
+  public static Image createApplicationIcon() {
+    var logo = new ImageIcon(ImageUtils.class.getResource("lucene-logo.png"));
+    var image = new BufferedImage(256, 256, BufferedImage.TYPE_INT_ARGB);
+    var graphics = image.createGraphics();
+    try {
+      graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+      graphics.setRenderingHint(
+          RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+      graphics.setColor(Color.WHITE);
+      graphics.fillRoundRect(8, 8, 240, 240, 48, 48);
+      int height = 224 * logo.getIconHeight() / logo.getIconWidth();
+      graphics.drawImage(logo.getImage(), 16, (256 - height) / 2, 224, height, null);
+    } finally {
+      graphics.dispose();
+    }
+    return image;
+  }
 
   public static ImageIcon createImageIcon(String name, int width, int height) {
     return createImageIcon(name, "", width, height);
@@ -33,7 +55,7 @@ public class ImageUtils {
       ImageIcon originalIcon = new ImageIcon(imgURL, description);
       ImageIcon icon =
           new ImageIcon(
-              originalIcon.getImage().getScaledInstance(width, height, Image.SCALE_DEFAULT));
+              originalIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH));
       return icon;
     } else {
       return null;
